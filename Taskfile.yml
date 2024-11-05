@@ -1,0 +1,66 @@
+# https://taskfile.dev/
+
+version: "3"
+
+tasks:
+  clean:
+    desc: Clean
+    cmds:
+      - go clean
+
+  build:
+    desc: Build
+    cmds:
+      - go build
+
+  linter:install:
+    desc: Install linter
+    cmds:
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+  lint:
+    desc: Lint the project
+    deps:
+      - linter:install
+    cmds:
+      - golangci-lint run
+
+  test:clean:
+    desc: Clean test cache
+    cmds:
+      - go clean -testcache
+      - rm -f coverage.out
+
+  test:
+    desc: Run tests
+    deps:
+      - test:clean
+    cmds:
+      - go test -v ./... -coverprofile=coverage.out
+
+  test:cover:
+    desc: Run tests with coverage
+    deps:
+      - test
+    cmds:
+      - go test ./... -v -cover
+
+  test:coverprofile:
+    desc: Run tests with coverage profile
+    cmds:
+      - go test ./... -v -coverprofile=coverage.out
+
+  test:cover:report:
+    desc: Show coverage
+    deps:
+      - test:coverprofile
+    cmds:
+      - go tool cover -html=coverage.out
+
+  ci:
+    desc: Run CI
+    deps:
+      - clean
+      - build
+      - lint
+      - test:coverprofile
