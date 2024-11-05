@@ -20,9 +20,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Go build
-        run: make build
-      - name: Run lint
-        run: make lint
-      - name: Run tests
-        run: make test.cover
+      - name: Install Taskfile
+        run: curl -sL https://taskfile.dev/install.sh | sh
+      - name: Run taskfile ci
+        run: task ci
