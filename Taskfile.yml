@@ -59,8 +59,7 @@ tasks:
 
   ci:
     desc: Run CI
-    deps:
-      - clean
-      - build
-      - lint
-      - test:coverprofile
+    cmds:
+      - task: build
+      - task: lint
+      - task: test:coverprofile
