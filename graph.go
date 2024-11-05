@@ -248,13 +248,15 @@ func (g *Graph) Append(v Vertex, prevVertices ...Vertex) error {
 }
 
 // Add appends an unconnected node to the graph
-func (g *Graph) Add(v Vertex) error {
-	if existing := g.Exists(v); existing {
-		return fmt.Errorf("vertex %s already added. vertices must be unique", v)
-	}
+func (g *Graph) Add(vertices ...Vertex) error {
+	for _, v := range vertices {
+		if existing := g.Exists(v); existing {
+			return fmt.Errorf("vertex %s already added. vertices must be unique", v)
+		}
 
-	g.vertices = append(g.vertices, v)
-	g.edges[v] = []string{}
+		g.vertices = append(g.vertices, v)
+		g.edges[v] = []string{}
+	}
 	return nil
 }
 
@@ -401,26 +403,35 @@ func (g *Graph) TopSort() (result []Vertex, err error) {
 	return result, nil
 }
 
-func (g *Graph) DeepCopy() *Graph {
+func (g *Graph) DeepCopy() (*Graph, error) {
 	graph := New()
 	for _, vertex := range g.vertices {
-		graph.Add(vertex)
+		err := graph.Add(vertex)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create deep copy")
+		}
 	}
 
 	for vertex, nextVertices := range g.edges {
 		for _, nextVertex := range nextVertices {
-			graph.Connect(vertex, nextVertex)
+			err := graph.Connect(vertex, nextVertex)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not create deep copy")
+			}
 		}
 	}
 
-	return graph
+	return graph, nil
 }
 
 // SubGraph returns a subgraph of existing graph that includes input vertices, clips out vertices & non connected edges
 func (g *Graph) SubGraph(vertices []Vertex) (graph *Graph, err error) {
 	excludedVertices := exclude(g.vertices, vertices...)
 
-	subGraph := g.DeepCopy()
+	subGraph, err := g.DeepCopy()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create sub graph")
+	}
 	for _, vertex := range excludedVertices {
 		err = subGraph.Disconnect(vertex)
 		if err != nil {

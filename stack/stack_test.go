@@ -12,7 +12,8 @@ func TestStack(t *testing.T) {
 		t.Run("should return true when stack is empty", func(t *testing.T) {
 			stack := stack.New()
 			stack.Push("X")
-			stack.Pop()
+			_, err := stack.Pop()
+			assert.Nil(t, err)
 			assert.Equal(t, true, stack.IsEmpty())
 		})
 		t.Run("should return false when stack is not empty", func(t *testing.T) {

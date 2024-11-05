@@ -8,22 +8,27 @@ GOTEST=$(GOCMD) test
 GOTESTALL=$(GOTEST) -v ./...
 GOTOOL=$(GOCMD) tool
 GOGET=$(GOCMD) get
+GOLINT=golangci-lint
 
-ci: build test.coverage
+
+ci: lint build test.cover
 
 build:
 	$(GOBUILD) ./...
 
 clean.testcache:
-	${GOCLEAN} -testcache
+	$(GOCLEAN) -testcache
 
-test.nocache: clean.testcache
+install.linter:
+	$(GOINSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+lint: install.linter
+	$(GOLINT) run
+
+test: clean.testcache
 	$(GOTESTALL)
 
-test:
-	$(GOTESTALL)
-
-test.cover:
+test.cover: clean.testcache
 	$(GOTESTALL) -v -cover
 
 test.cover.report: clean.testcache
