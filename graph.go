@@ -2,6 +2,7 @@ package dag
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/aacanakin/dag/queue"
 	"github.com/aacanakin/dag/set"
@@ -22,33 +23,38 @@ func New() *Graph {
 }
 
 type Graph struct {
+	mu       sync.RWMutex
 	vertices []Vertex
 	edges    Edges
 }
 
 func (g *Graph) Edges() Edges {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	return g.edges
 }
 
 func (g *Graph) Vertices() []Vertex {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	return g.vertices
 }
 
 func (g *Graph) Exists(vertex Vertex) bool {
-	idx := index(g.Vertices(), func(n Vertex) bool {
-		return n == vertex
-	})
-
-	return idx > -1
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	_, exists := g.edges[vertex]
+	return exists
 }
 
 func (g *Graph) Prev(vertex Vertex) (prev []Vertex, err error) {
 	if existing := g.Exists(vertex); !existing {
-		return []Vertex{}, fmt.Errorf("vertex `%s` does not exist in graph", vertex)
+		return []Vertex{}, fmt.Errorf("vertex %s is not found in graph", vertex)
 	}
 
 	prev = []Vertex{}
-	for _, v := range g.vertices {
+
+	for _, v := range g.Vertices() {
 		nextVertices, err := g.Next(v)
 		if err != nil {
 			return []Vertex{}, errors.Wrap(err, "could not calculate prev")
@@ -65,8 +71,11 @@ func (g *Graph) Prev(vertex Vertex) (prev []Vertex, err error) {
 
 func (g *Graph) Next(vertex Vertex) ([]Vertex, error) {
 	if existing := g.Exists(vertex); !existing {
-		return []Vertex{}, errors.Wrap(fmt.Errorf("vertex %s is not found in graph", vertex), "could not find next vertices")
+		return []Vertex{}, fmt.Errorf("vertex %s is not found in graph", vertex)
 	}
+
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	next := g.edges[vertex]
 	if next == nil {
 		return []Vertex{}, nil
@@ -101,11 +110,10 @@ func (g *Graph) Reverse() (*Graph, error) {
 		return nil, errors.Wrap(err, "could not reverse graph")
 	}
 
-	return &Graph{g.vertices, revEdges}, nil
+	return &Graph{vertices: g.Vertices(), edges: revEdges}, nil
 }
 
 func (g *Graph) DFS(start Vertex) (result []Vertex, err error) {
-
 	stack := stack.New()
 	stack.Push(start)
 
@@ -234,28 +242,46 @@ func (g *Graph) Roots() ([]Vertex, error) {
 
 // Append adds a new vertex to graph given vertex and previous vertices,
 // returns error if any of the previous vertices is not present in graph
-func (g *Graph) Append(v Vertex, prevVertices ...Vertex) error {
+func (g *Graph) Append(v Vertex, prevVertices []Vertex) error {
 	if existing := g.Exists(v); existing {
 		return errors.Wrap(fmt.Errorf("duplicate node id=%s are not allowed", v), "could not append node to graph")
 	}
 
 	for _, prevVertex := range prevVertices {
+		if !g.Exists(prevVertex) {
+			return errors.Wrap(fmt.Errorf("prev vertex %s is not found in graph", prevVertex), "could not append node to graph")
+		}
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.vertices = append(g.vertices, v)
+	g.edges[v] = []Vertex{}
+
+	for _, prevVertex := range prevVertices {
 		g.edges[prevVertex] = append(g.edges[prevVertex], v)
 	}
-	g.vertices = append(g.vertices, v)
 
 	return nil
 }
 
 // Add appends an unconnected node to the graph
 func (g *Graph) Add(vertices ...Vertex) error {
+	if len(vertices) == 0 {
+		return fmt.Errorf("no vertices to add to graph")
+	}
 	for _, v := range vertices {
 		if existing := g.Exists(v); existing {
 			return fmt.Errorf("vertex %s already added. vertices must be unique", v)
 		}
 
+		g.mu.Lock()
+
 		g.vertices = append(g.vertices, v)
-		g.edges[v] = []string{}
+		g.edges[v] = []Vertex{}
+
+		g.mu.Unlock()
 	}
 	return nil
 }
@@ -282,6 +308,7 @@ func (g *Graph) hasDep(from Vertex, to Vertex) bool {
 }
 
 func (g *Graph) Connect(from Vertex, to Vertex) error {
+
 	hasEdge, err := g.hasNext(from, to)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("could not connect vertex %s to vertex %s", from, to))
@@ -294,19 +321,26 @@ func (g *Graph) Connect(from Vertex, to Vertex) error {
 		return fmt.Errorf("could not connect nodes. reason: cyclic edges are not allowed from %s to %s", from, to)
 	}
 
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.edges[from] = append(g.edges[from], to)
 
 	return nil
 }
 
 func (g *Graph) DisconnectEdge(from Vertex, to Vertex) error {
+	g.mu.RLock()
 	edgeIndex := index(g.edges[from], func(v Vertex) bool {
 		return v == to
 	})
+	g.mu.RUnlock()
+
 	if edgeIndex < 0 {
 		return fmt.Errorf("could not disconnect graph node prev=%s next=%s. edge does not exist", from, to)
 	}
 
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.edges[from] = exclude(g.edges[from], to)
 
 	return nil
@@ -336,8 +370,6 @@ func (g *Graph) Disconnect(v Vertex) error {
 		}
 	}
 
-	delete(g.edges, v)
-
 	return nil
 }
 
@@ -355,13 +387,19 @@ func (g *Graph) Remove(v Vertex) (removed []Vertex, err error) {
 		}
 		removed = append(removed, removedVertex)
 	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.vertices = exclude(g.vertices, toRemove...)
+	delete(g.edges, v)
 
 	return removed, nil
 }
 
 // TopSort applies topological sort algorithm to graph and returns vertices slice
 func (g *Graph) TopSort() (result []Vertex, err error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
 	inDegree := make(map[Vertex]int, len(g.vertices))
 	for _, vertex := range g.vertices {
@@ -405,14 +443,14 @@ func (g *Graph) TopSort() (result []Vertex, err error) {
 
 func (g *Graph) DeepCopy() (*Graph, error) {
 	graph := New()
-	for _, vertex := range g.vertices {
+	for _, vertex := range g.Vertices() {
 		err := graph.Add(vertex)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create deep copy")
 		}
 	}
 
-	for vertex, nextVertices := range g.edges {
+	for vertex, nextVertices := range g.Edges() {
 		for _, nextVertex := range nextVertices {
 			err := graph.Connect(vertex, nextVertex)
 			if err != nil {
@@ -426,7 +464,7 @@ func (g *Graph) DeepCopy() (*Graph, error) {
 
 // SubGraph returns a subgraph of existing graph that includes input vertices, clips out vertices & non connected edges
 func (g *Graph) SubGraph(vertices []Vertex) (graph *Graph, err error) {
-	excludedVertices := exclude(g.vertices, vertices...)
+	excludedVertices := exclude(g.Vertices(), vertices...)
 
 	subGraph, err := g.DeepCopy()
 	if err != nil {
