@@ -32,18 +32,30 @@ tasks:
       - rm -f coverage.out
 
   test:
+    desc: Run tests with verbose flag
+    deps:
+      - test:clean
+    cmds:
+      - go test ./...
+
+  test:verbose:
     desc: Run tests
     deps:
       - test:clean
     cmds:
       - go test -v ./... -coverprofile=coverage.out
 
+  test:race:
+    desc: Run tests with race flag
+    deps:
+      - test:clean
+    cmds:
+      - go test -race -v  ./...
+
   test:cover:
     desc: Run tests with coverage
-    deps:
-      - test
     cmds:
-      - go test ./... -v -cover
+      - go test ./... -cover
 
   test:coverprofile:
     desc: Run tests with coverage profile
@@ -62,4 +74,5 @@ tasks:
     cmds:
       - task: build
       - task: lint
+      - task: test:race
       - task: test:coverprofile

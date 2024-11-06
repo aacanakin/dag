@@ -18,6 +18,7 @@ func createGraph() *dag.Graph {
 	g := dag.New()
 
 	err := g.Add("A", "B", "C", "D", "E", "F")
+
 	if err != nil {
 		panic(errors.Wrap(err, "could not create sample graph for testing"))
 	}
@@ -81,56 +82,72 @@ func TestGraph(t *testing.T) {
 	})
 
 	t.Run("Prev", func(t *testing.T) {
-		t.Run("should return error for non existing vertex", func(t *testing.T) {
-			g := createGraph()
-			prev, err := g.Prev("X")
-			assert.Equal(t, []dag.Vertex{}, prev)
-			assert.NotNil(t, err)
-		})
 
-		t.Run("should return empty prev for root vertex", func(t *testing.T) {
-			g := createGraph()
-			prev, err := g.Prev("A")
-			assert.Equal(t, []dag.Vertex{}, prev)
-			assert.Nil(t, err)
-		})
+		type prevResult struct {
+			prev []dag.Vertex
+			err  error
+		}
 
-		t.Run("should return single previous vertex", func(t *testing.T) {
-			g := createGraph()
-			prev, err := g.Prev("B")
-			assert.Equal(t, []dag.Vertex{"A"}, prev)
-			assert.Nil(t, err)
-		})
+		g := createGraph()
 
-		t.Run("should return multiple previous vertices", func(t *testing.T) {
-			g := createGraph()
-			prev, err := g.Prev("E")
-			assert.Equal(t, []dag.Vertex{"B", "D"}, prev)
-			assert.Nil(t, err)
-		})
+		expected := map[string]prevResult{
+			"A":       {prev: []dag.Vertex{}, err: nil},
+			"B":       {prev: []dag.Vertex{"A"}, err: nil},
+			"C":       {prev: []dag.Vertex{"B"}, err: nil},
+			"D":       {prev: []dag.Vertex{"A"}, err: nil},
+			"E":       {prev: []dag.Vertex{"B", "D"}, err: nil},
+			"F":       {prev: []dag.Vertex{"E"}, err: nil},
+			"invalid": {prev: []dag.Vertex{}, err: fmt.Errorf("vertex invalid is not found in graph")},
+		}
+
+		results := map[string]prevResult{}
+		for vertex := range expected {
+			prev, err := g.Prev(vertex)
+			results[vertex] = prevResult{
+				prev: prev,
+				err:  err,
+			}
+		}
+
+		for vertex, result := range expected {
+			assert.Equal(t, result.prev, results[vertex].prev, fmt.Sprintf("Checking prev of vertex %s", vertex))
+			assert.Equal(t, result.err, results[vertex].err, fmt.Sprintf("Checking error of vertex %s", vertex))
+		}
+
 	})
 
 	t.Run("Next", func(t *testing.T) {
-		t.Run("should return error for non existing vertex", func(t *testing.T) {
-			g := createGraph()
-			next, err := g.Next("X")
-			assert.Equal(t, []dag.Vertex{}, next)
-			assert.NotNil(t, err)
-		})
 
-		t.Run("should return empty next for leaf vertex", func(t *testing.T) {
-			g := createGraph()
-			next, err := g.Next("C")
-			assert.Equal(t, []dag.Vertex{}, next)
-			assert.Nil(t, err)
-		})
+		type nextResult struct {
+			next []dag.Vertex
+			err  error
+		}
 
-		t.Run("should return single next vertex", func(t *testing.T) {
-			g := createGraph()
-			next, err := g.Next("D")
-			assert.Equal(t, []dag.Vertex{"E"}, next)
-			assert.Nil(t, err)
-		})
+		g := createGraph()
+
+		expected := map[string]nextResult{
+			"A":       {next: []dag.Vertex{"B", "D"}, err: nil},
+			"B":       {next: []dag.Vertex{"C", "E"}, err: nil},
+			"C":       {next: []dag.Vertex{}, err: nil},
+			"D":       {next: []dag.Vertex{"E"}, err: nil},
+			"E":       {next: []dag.Vertex{"F"}, err: nil},
+			"F":       {next: []dag.Vertex{}, err: nil},
+			"invalid": {next: []dag.Vertex{}, err: fmt.Errorf("vertex invalid is not found in graph")},
+		}
+
+		results := map[string]nextResult{}
+		for vertex := range expected {
+			next, err := g.Next(vertex)
+			results[vertex] = nextResult{
+				next: next,
+				err:  err,
+			}
+		}
+
+		for vertex, result := range expected {
+			assert.Equal(t, result.next, results[vertex].next, fmt.Sprintf("Checking next of vertex %s", vertex))
+			assert.Equal(t, result.err, results[vertex].err, fmt.Sprintf("Checking error of vertex %s", vertex))
+		}
 	})
 
 	t.Run("ReverseEdges", func(t *testing.T) {
@@ -316,7 +333,6 @@ func TestGraph(t *testing.T) {
 		t.Run("should return deps for every vertex in sample graph", func(t *testing.T) {
 			g := createGraph()
 
-			results := map[string]depsResult{}
 			expected := map[string]depsResult{
 				"A": {[]dag.Vertex(nil), nil},
 				"B": {[]dag.Vertex{"A"}, nil},
@@ -326,6 +342,7 @@ func TestGraph(t *testing.T) {
 				"F": {[]dag.Vertex{"A", "B", "D", "E"}, nil},
 			}
 
+			results := map[string]depsResult{}
 			for _, v := range g.Vertices() {
 				deps, err := g.Deps(v)
 
@@ -479,9 +496,9 @@ func TestGraph(t *testing.T) {
 		t.Run("should append new vertex to sample graph", func(t *testing.T) {
 			g := createGraph()
 
-			err := g.Append("X", "A", "B")
+			err := g.Append("X", []dag.Vertex{"A", "B"})
 			assert.Nil(t, err)
-			assert.Equal(t, []dag.Vertex{"A", "B", "C", "D", "E", "F", "X"}, g.Vertices(), "Checking vertices")
+			assert.Equal(t, []dag.Vertex{"A", "B", "C", "D", "E", "F", "X"}, g.Vertices(), "Checking vertices after appending X")
 
 			prev, err := g.Prev("X")
 			assert.Nil(t, err)
@@ -503,7 +520,7 @@ func TestGraph(t *testing.T) {
 		t.Run("should append new vertex without any prev vertice", func(t *testing.T) {
 			g := createGraph()
 
-			err := g.Append("X")
+			err := g.Append("X", []dag.Vertex{})
 			assert.Nil(t, err)
 			assert.Equal(t, []dag.Vertex{"A", "B", "C", "D", "E", "F", "X"}, g.Vertices(), "Checking vertices")
 
@@ -527,7 +544,7 @@ func TestGraph(t *testing.T) {
 		t.Run("should append new vertex with every vertex as prev", func(t *testing.T) {
 			g := createGraph()
 
-			err := g.Append("X", "A", "B", "C", "D", "E", "F")
+			err := g.Append("X", []dag.Vertex{"A", "B", "C", "D", "E", "F"})
 			assert.Nil(t, err)
 
 			assert.Equal(t, []dag.Vertex{"A", "B", "C", "D", "E", "F", "X"}, g.Vertices(), "Checking vertices")
@@ -775,7 +792,7 @@ func TestGraph(t *testing.T) {
 			assert.Equal(t, g.Vertices(), copy.Vertices(), "Checking vertices")
 			assert.Equal(t, g.Edges(), copy.Edges(), "Checking edges")
 
-			err = g.Append("X", "F")
+			err = g.Append("X", []dag.Vertex{"F"})
 
 			assert.Nil(t, err)
 			assert.NotEqual(t, g.Vertices(), copy.Vertices(), "Checking vertices")
