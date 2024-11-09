@@ -27,6 +27,3 @@ jobs:
 
       - name: Run taskfile ci
         run: task ci
-
-      - name: Update coverage report
-        uses: ncruces/go-coverage-report@main
