@@ -89,8 +89,6 @@ func (g *Graph) ReverseEdges() (Edges, error) {
 		reverse[vertex] = []Vertex{}
 	}
 
-	// a -> [b, c]
-	// a -> [d, e]
 	for _, vertex := range g.Vertices() {
 		nextVertices, err := g.Next(vertex)
 		if err != nil {
