@@ -593,6 +593,14 @@ func TestGraph(t *testing.T) {
 			assert.NotNil(t, err)
 			assert.Equal(t, []dag.Vertex{"A", "B", "C", "D", "E", "F"}, g.Vertices(), "Checking vertices")
 		})
+
+		t.Run("should return error for no vertex", func(t *testing.T) {
+			g := createGraph()
+
+			err := g.Add()
+
+			assert.NotNil(t, err)
+		})
 	})
 
 	t.Run("Connect", func(t *testing.T) {
