@@ -557,6 +557,22 @@ func TestGraph(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, []dag.Vertex{}, next, fmt.Sprintf("Checking next of X: %v", next))
 		})
+
+		t.Run("should return error for existing vertex", func(t *testing.T) {
+			g := createGraph()
+
+			err := g.Append("A", []dag.Vertex{})
+
+			assert.NotNil(t, err)
+		})
+
+		t.Run("should return error for non existing prev vertices", func(t *testing.T) {
+			g := createGraph()
+
+			err := g.Append("X", []dag.Vertex{"Y"})
+
+			assert.NotNil(t, err)
+		})
 	})
 
 	t.Run("Add", func(t *testing.T) {
@@ -613,6 +629,14 @@ func TestGraph(t *testing.T) {
 			assert.Nil(t, err)
 
 			err = g.Connect("F", "A")
+
+			assert.NotNil(t, err)
+		})
+
+		t.Run("should return error non existing vertices", func(t *testing.T) {
+			g := createGraph()
+
+			err := g.Connect("X", "A")
 
 			assert.NotNil(t, err)
 		})
