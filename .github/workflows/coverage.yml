@@ -22,8 +22,11 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Install Taskfile
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+
       - name: Run tests
-        run: go test -coverprofile=coverage.txt
+        run: task test:codecov
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v4

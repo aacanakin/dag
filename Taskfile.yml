@@ -38,6 +38,11 @@ tasks:
     cmds:
       - go test ./...
 
+  test:codecov:
+    desc: Run tests for codecov reporting
+    cmds:
+      - go test -v ./... -coverprofile=coverage.txt
+
   test:verbose:
     desc: Run tests
     deps:
