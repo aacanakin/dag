@@ -18,9 +18,19 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
+
       - name: Checkout code
         uses: actions/checkout@v2
+
       - name: Install Taskfile
         run: go install github.com/go-task/task/v3/cmd/task@latest
+
       - name: Run taskfile ci
         run: task ci
+
+      - name: Update coverage report
+        uses: ncruces/go-coverage-report@main
+        with:
+          report: true
+          chart: true
+          amend: true
