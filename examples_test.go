@@ -1,3 +1,4 @@
+//nolint:errcheck
 package dag_test
 
 import (
