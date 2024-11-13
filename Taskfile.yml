@@ -58,7 +58,7 @@ tasks:
     deps:
       - test:clean
     cmds:
-      - go test -race -v  ./...
+      - go test -race ./...
 
   test:cover:
     desc: Run tests with coverage
@@ -70,6 +70,12 @@ tasks:
     cmds:
       - go test ./... -coverprofile=coverage.out
       - go tool cover -func coverage.out
+
+  test:cover:check:
+    desc: Check test coverage
+    deps:
+      - test:coverprofile
+    cmds:
       - |
         echo "Checking test coverage is above threshold ..."
         echo "Threshold             : $TEST_COVERAGE_THRESHOLD %"
@@ -108,4 +114,4 @@ tasks:
       - task: build
       - task: lint
       - task: test:race
-      - task: test:coverprofile
+      - task: test:cover:check
