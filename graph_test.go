@@ -16,37 +16,72 @@ v    v
 D -> E -> F
 */
 func createGraph() *dag.Graph {
-	g := dag.New()
-
-	err := g.Add("A", "B", "C", "D", "E", "F")
+	var err error
+	g, err := dag.New(
+		dag.WithVertices([]dag.Vertex{"A", "B", "C", "D", "E", "F"}),
+		dag.WithEdges(dag.Edges{
+			"A": []dag.Vertex{"B", "D"},
+			"B": []dag.Vertex{"C", "E"},
+			"D": []dag.Vertex{"E"},
+			"E": []dag.Vertex{"F"},
+		}),
+	)
 
 	if err != nil {
 		panic(errors.Wrap(err, "could not create sample graph for testing"))
-	}
-
-	edges := []struct {
-		from string
-		to   string
-	}{
-		{from: "A", to: "B"},
-		{from: "A", to: "D"},
-		{from: "B", to: "C"},
-		{from: "B", to: "E"},
-		{from: "D", to: "E"},
-		{from: "E", to: "F"},
-	}
-
-	for _, edge := range edges {
-		err := g.Connect(edge.from, edge.to)
-		if err != nil {
-			panic(errors.Wrap(err, fmt.Sprintf("could not connect %s to %s", edge.from, edge.to)))
-		}
 	}
 
 	return g
 }
 
 func TestGraph(t *testing.T) {
+	t.Run("New", func(t *testing.T) {
+		t.Run("should return an empty graph", func(t *testing.T) {
+			g, err := dag.New()
+			assert.Nil(t, err)
+			assert.NotNil(t, g)
+		})
+
+		t.Run("should return a graph with vertices", func(t *testing.T) {
+			g, err := dag.New(dag.WithVertices([]dag.Vertex{"A", "B", "C"}))
+			assert.Nil(t, err)
+			assert.NotNil(t, g)
+			assert.Equal(t, []dag.Vertex{"A", "B", "C"}, g.Vertices())
+		})
+
+		t.Run("should return error when WithVertices is not unique", func(t *testing.T) {
+			_, err := dag.New(dag.WithVertices([]dag.Vertex{"A", "B", "A"}))
+			assert.NotNil(t, err)
+		})
+
+		t.Run("should return a graph with edges", func(t *testing.T) {
+			g, err := dag.New(
+				dag.WithVertices([]dag.Vertex{"A", "B", "C"}),
+				dag.WithEdges(dag.Edges{
+					"A": []dag.Vertex{"B", "C"},
+					"B": []dag.Vertex{"C"},
+				}))
+			assert.Nil(t, err)
+			assert.NotNil(t, g)
+			assert.Equal(t, []dag.Vertex{"A", "B", "C"}, g.Vertices())
+			edges := g.Edges()
+			assert.Equal(t, 3, len(edges))
+			assert.Equal(t, []dag.Vertex{"B", "C"}, edges["A"])
+			assert.Equal(t, []dag.Vertex{"C"}, edges["B"])
+		})
+
+		t.Run("should return error when edges are not correct", func(t *testing.T) {
+			g, err := dag.New(
+				dag.WithVertices([]dag.Vertex{"A", "B", "C"}),
+				dag.WithEdges(dag.Edges{
+					"A": []dag.Vertex{"B", "C"},
+					"C": []dag.Vertex{"A"},
+				}))
+			assert.NotNil(t, err)
+			assert.Nil(t, g)
+		})
+	})
+
 	t.Run("Vertices", func(t *testing.T) {
 		t.Run("should return all vertices of graph", func(t *testing.T) {
 			g := createGraph()
@@ -63,8 +98,10 @@ func TestGraph(t *testing.T) {
 		})
 
 		t.Run("should return empty slice for graph with no vertices", func(t *testing.T) {
-			assert.Equal(t, 0, len(dag.New().Vertices()))
-			assert.Equal(t, []dag.Vertex{}, dag.New().Vertices())
+			g, err := dag.New()
+			assert.Nil(t, err)
+			assert.Equal(t, 0, len(g.Vertices()))
+			assert.Equal(t, []dag.Vertex{}, g.Vertices())
 		})
 
 		t.Run("should return true for existing vertex", func(t *testing.T) {
@@ -153,8 +190,9 @@ func TestGraph(t *testing.T) {
 
 	t.Run("ReverseEdges", func(t *testing.T) {
 		t.Run("should return no edges with empty edges", func(t *testing.T) {
-			g := dag.New()
-			err := g.Add(dag.Vertex("A"))
+			g, err := dag.New()
+			assert.Nil(t, err)
+			err = g.Add(dag.Vertex("A"))
 			assert.Nil(t, err)
 
 			revEdges, err := g.ReverseEdges()
@@ -164,8 +202,9 @@ func TestGraph(t *testing.T) {
 		})
 
 		t.Run("should reverse single edge correctly", func(t *testing.T) {
-			g := dag.New()
-			err := g.Add("A")
+			g, err := dag.New()
+			assert.Nil(t, err)
+			err = g.Add("A")
 			assert.Nil(t, err)
 			err = g.Add("B")
 			assert.Nil(t, err)
@@ -179,8 +218,9 @@ func TestGraph(t *testing.T) {
 		})
 
 		t.Run("should reverse graph with multiple next for a single vertex correctly", func(t *testing.T) {
-			g := dag.New()
 			var err error
+			g, err := dag.New()
+			assert.Nil(t, err)
 			err = g.Add(dag.Vertex("A"))
 			assert.Nil(t, err)
 			err = g.Add(dag.Vertex("B"))
@@ -435,7 +475,8 @@ func TestGraph(t *testing.T) {
 
 		t.Run("should return multi disconnected root vertices", func(t *testing.T) {
 			var err error
-			g := dag.New()
+			g, err := dag.New()
+			assert.Nil(t, err)
 			err = g.Add("A")
 			assert.Nil(t, err)
 			err = g.Add("B")
@@ -448,7 +489,8 @@ func TestGraph(t *testing.T) {
 
 		t.Run("should return multi interconnected root vertices", func(t *testing.T) {
 			var err error
-			g := dag.New()
+			g, err := dag.New()
+			assert.Nil(t, err)
 			err = g.Add("A")
 			assert.Nil(t, err)
 			err = g.Add("B")
@@ -470,7 +512,8 @@ func TestGraph(t *testing.T) {
 
 		t.Run("should return multi connected root vertices", func(t *testing.T) {
 			var err error
-			g := dag.New()
+			g, err := dag.New()
+			assert.Nil(t, err)
 			err = g.Add("R1")
 			assert.Nil(t, err)
 			err = g.Add("R2")
@@ -781,9 +824,10 @@ func TestGraph(t *testing.T) {
 		})
 
 		t.Run("should sort vertices in topological order (harder case)", func(t *testing.T) {
-			g := dag.New()
-
 			var err error
+			g, err := dag.New()
+			assert.Nil(t, err)
+
 			err = g.Add("2", "3", "5", "7", "8", "9", "10", "11")
 			assert.Nil(t, err)
 

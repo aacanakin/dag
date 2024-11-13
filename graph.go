@@ -10,6 +10,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+type GraphOptions func(*Graph) error
+
+func WithVertices(vertices []Vertex) GraphOptions {
+	return func(g *Graph) error {
+		return g.Add(vertices...)
+	}
+}
+
+// WithEdges sets the edges of the graph
+func WithEdges(edges Edges) GraphOptions {
+	return func(g *Graph) (err error) {
+		for vertex, nextVertices := range edges {
+			for _, nextVertex := range nextVertices {
+				err = g.Connect(vertex, nextVertex)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+}
+
 // Vertex represents a vertex or node in the graph
 type Vertex = string
 
@@ -18,11 +41,18 @@ type Vertex = string
 type Edges map[Vertex][]Vertex
 
 // New creates an empty graph with no vertices & edges and returns it
-func New() *Graph {
-	return &Graph{
+func New(opts ...GraphOptions) (*Graph, error) {
+	g := &Graph{
 		vertices: []Vertex{},
 		edges:    map[Vertex][]Vertex{},
 	}
+
+	for _, opt := range opts {
+		if err := opt(g); err != nil {
+			return nil, err
+		}
+	}
+	return g, nil
 }
 
 // Graph represents a directed asyclic graph
@@ -325,13 +355,13 @@ func (g *Graph) hasDep(from Vertex, to Vertex) bool {
 //
 // returns error if;
 //
-// 	the edge already exists or if the edge creates a cycle
+//	the edge already exists or if the edge creates a cycle
 //
-// 	the from vertex is not found in the graph
+//	the from vertex is not found in the graph
 //
-// 	the to vertex is not found in the graph
+//	the to vertex is not found in the graph
 //
-// 	the from vertex is the same as the to vertex
+//	the from vertex is the same as the to vertex
 //
 // it can be used to lazily initialize vertice connections
 func (g *Graph) Connect(from Vertex, to Vertex) error {
@@ -474,7 +504,11 @@ func (g *Graph) TopSort() (result []Vertex, err error) {
 
 // DeepCopy creates a deep copy of the graph
 func (g *Graph) DeepCopy() (*Graph, error) {
-	graph := New()
+	graph, err := New()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create deep copy")
+	}
+
 	for _, vertex := range g.Vertices() {
 		err := graph.Add(vertex)
 		if err != nil {

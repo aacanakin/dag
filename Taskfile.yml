@@ -3,7 +3,7 @@
 version: "3"
 
 env:
-  TEST_COVERAGE_THRESHOLD: 90
+  TEST_COVERAGE_THRESHOLD: 91
 
 tasks:
   clean:
