@@ -73,4 +73,3 @@ More examples can be found in the godoc examples.
 
 ## Roadmap
 - [ ] Generic vertex types
-- [ ] Option builder implementation to graph.New()
