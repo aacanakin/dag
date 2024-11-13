@@ -36,18 +36,20 @@ func main() {
 	// D -> E -> F
 
 	// Create an empty directed acyclic graph
-	graph := dag.New()
+	var err error
+	g, err := dag.New(
+		dag.WithVertices([]dag.Vertex{"A", "B", "C", "D", "E", "F"}),
+		dag.WithEdges(dag.Edges{
+			"A": []dag.Vertex{"B", "D"},
+			"B": []dag.Vertex{"C", "E"},
+			"D": []dag.Vertex{"E"},
+			"E": []dag.Vertex{"F"},
+		}),
+	)
 
-	// Add some vertices
-	graph.Add("A", "B", "C", "D", "E", "F")
-
-	// Add some edges
-	graph.Connect("A", "B")
-	graph.Connect("B", "C")
-	graph.Connect("A", "D")
-	graph.Connect("D", "E")
-	graph.Connect("B", "E")
-	graph.Connect("E", "F")
+	if err != nil {
+		panic(errors.Wrap(err, "could not create sample graph"))
+	}
 
 	// Get the topological order
 	sorted, _ := graph.TopSort()

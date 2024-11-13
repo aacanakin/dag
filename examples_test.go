@@ -2,8 +2,9 @@
 package dag_test
 
 import (
-	"github.com/aacanakin/dag"
 	"fmt"
+
+	"github.com/aacanakin/dag"
 )
 
 func ExampleGraph() {
@@ -14,7 +15,7 @@ func ExampleGraph() {
 	// D -> E -> F
 
 	// Create an empty directed acyclic graph
-	graph := dag.New()
+	graph, _ := dag.New()
 
 	// Add some vertices
 	graph.Add("A", "B", "C", "D", "E", "F")
@@ -87,7 +88,7 @@ func ExampleGraph_Deps() {
 	// D -> E -> F
 
 	// Create an empty directed acyclic graph
-	graph := dag.New()
+	graph, _ := dag.New()
 
 	// Add some vertices
 	graph.Add("A", "B", "C", "D", "E", "F")
@@ -126,7 +127,7 @@ func ExampleGraph_Disconnect() {
 	// D -> E -> F
 
 	// Create an empty directed acyclic graph
-	graph := dag.New()
+	graph, _ := dag.New()
 
 	// Add some vertices
 	graph.Add("A", "B", "C", "D", "E", "F")
