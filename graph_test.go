@@ -10,9 +10,10 @@ import (
 )
 
 /*
-A -- B -- C
+A -> B -> C
 |    |
-D -- E -- F
+v    v
+D -> E -> F
 */
 func createGraph() *dag.Graph {
 	g := dag.New()
