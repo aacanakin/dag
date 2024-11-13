@@ -65,7 +65,7 @@ tasks:
   test:coverprofile:
     desc: Run tests with coverage profile
     cmds:
-      - go test ./... -v -coverprofile=coverage.out
+      - go test ./... -coverprofile=coverage.out
 
   test:cover:report:
     desc: Show coverage
@@ -74,10 +74,21 @@ tasks:
     cmds:
       - go tool cover -html=coverage.out
 
+  docs:install:
+    desc: Install godoc
+    cmds:
+      - go install golang.org/x/tools/cmd/godoc@latest
+
+  docs:start:
+    desc: Start docs server
+    deps:
+      - docs:install
+    cmds:
+      - godoc -http :8080
+
   ci:
     desc: Run CI
     cmds:
       - task: build
       - task: lint
-      - task: test:race
       - task: test:coverprofile

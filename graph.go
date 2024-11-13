@@ -10,11 +10,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Vertex represents a vertex or node in the graph
 type Vertex = string
 
 // keys represent vertex & values are direct edges to vertices
+// Edges represents the edges of the graph
 type Edges map[Vertex][]Vertex
 
+// New creates an empty graph with no vertices & edges and returns it
 func New() *Graph {
 	return &Graph{
 		vertices: []Vertex{},
@@ -22,24 +25,28 @@ func New() *Graph {
 	}
 }
 
+// Graph represents a directed asyclic graph
 type Graph struct {
 	mu       sync.RWMutex
 	vertices []Vertex
 	edges    Edges
 }
 
+// Edges returns the edges of the graph
 func (g *Graph) Edges() Edges {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.edges
 }
 
+// Vertices returns the vertices of the graph
 func (g *Graph) Vertices() []Vertex {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.vertices
 }
 
+// Exists checks if a vertex exists in the graph
 func (g *Graph) Exists(vertex Vertex) bool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -47,6 +54,7 @@ func (g *Graph) Exists(vertex Vertex) bool {
 	return exists
 }
 
+// Prev returns the previous vertices of a given vertex
 func (g *Graph) Prev(vertex Vertex) (prev []Vertex, err error) {
 	if existing := g.Exists(vertex); !existing {
 		return []Vertex{}, fmt.Errorf("vertex %s is not found in graph", vertex)
@@ -69,6 +77,7 @@ func (g *Graph) Prev(vertex Vertex) (prev []Vertex, err error) {
 	return prev, nil
 }
 
+// Next returns the next vertices of a given vertex
 func (g *Graph) Next(vertex Vertex) ([]Vertex, error) {
 	if existing := g.Exists(vertex); !existing {
 		return []Vertex{}, fmt.Errorf("vertex %s is not found in graph", vertex)
@@ -83,6 +92,8 @@ func (g *Graph) Next(vertex Vertex) ([]Vertex, error) {
 	return next, nil
 }
 
+// ReverseEdges returns the reverse edges of the graph
+// example: {a: [b, c], b: [c], c: []} -> {a: [], b: [a], c: [a, b]}
 func (g *Graph) ReverseEdges() (Edges, error) {
 	reverse := map[Vertex][]Vertex{}
 	for _, vertex := range g.Vertices() {
@@ -102,6 +113,7 @@ func (g *Graph) ReverseEdges() (Edges, error) {
 	return reverse, nil
 }
 
+// Reverse returns the reverse graph of the graph with reversed edges
 func (g *Graph) Reverse() (*Graph, error) {
 	revEdges, err := g.ReverseEdges()
 	if err != nil {
@@ -111,6 +123,7 @@ func (g *Graph) Reverse() (*Graph, error) {
 	return &Graph{vertices: g.Vertices(), edges: revEdges}, nil
 }
 
+// DFS performs depth first search on the graph starting from the given vertex
 func (g *Graph) DFS(start Vertex) (result []Vertex, err error) {
 	stack := stack.New()
 	stack.Push(start)
@@ -141,6 +154,7 @@ func (g *Graph) DFS(start Vertex) (result []Vertex, err error) {
 	return result, nil
 }
 
+// BFS performs breadth first search on the graph starting from the given vertex
 func (g *Graph) BFS(start Vertex) (result []Vertex, err error) {
 	queue := queue.New()
 	queue.Enqueue(start)
@@ -216,6 +230,7 @@ func (g *Graph) ReverseDeps(vertex Vertex) (result []Vertex, err error) {
 	return sorted, err
 }
 
+// Leaves returns the leaf vertices of the graph
 func (g *Graph) Leaves() (leaves []Vertex, err error) {
 	for _, vertex := range g.Vertices() {
 		next, err := g.Next(vertex)
@@ -230,6 +245,7 @@ func (g *Graph) Leaves() (leaves []Vertex, err error) {
 	return leaves, nil
 }
 
+// Roots returns the root vertices of the graph
 func (g *Graph) Roots() ([]Vertex, error) {
 	reverse, err := g.Reverse()
 	if err != nil {
@@ -305,6 +321,19 @@ func (g *Graph) hasDep(from Vertex, to Vertex) bool {
 	})
 }
 
+// Connect connects two vertices in the graph
+//
+// returns error if;
+//
+// 	the edge already exists or if the edge creates a cycle
+//
+// 	the from vertex is not found in the graph
+//
+// 	the to vertex is not found in the graph
+//
+// 	the from vertex is the same as the to vertex
+//
+// it can be used to lazily initialize vertice connections
 func (g *Graph) Connect(from Vertex, to Vertex) error {
 
 	hasEdge, err := g.hasNext(from, to)
@@ -326,6 +355,8 @@ func (g *Graph) Connect(from Vertex, to Vertex) error {
 	return nil
 }
 
+// DisconnectEdge disconnects two vertices in the graph
+// returns error if the edge does not exist
 func (g *Graph) DisconnectEdge(from Vertex, to Vertex) error {
 	g.mu.RLock()
 	edgeIndex := index(g.edges[from], func(v Vertex) bool {
@@ -344,6 +375,8 @@ func (g *Graph) DisconnectEdge(from Vertex, to Vertex) error {
 	return nil
 }
 
+// Disconnect disconnects all edges from and to a vertex
+// returns error if the vertex is not found in the graph
 func (g *Graph) Disconnect(v Vertex) error {
 	prev, err := g.Prev(v)
 	if err != nil {
@@ -439,6 +472,7 @@ func (g *Graph) TopSort() (result []Vertex, err error) {
 	return result, nil
 }
 
+// DeepCopy creates a deep copy of the graph
 func (g *Graph) DeepCopy() (*Graph, error) {
 	graph := New()
 	for _, vertex := range g.Vertices() {
