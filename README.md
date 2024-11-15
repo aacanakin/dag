@@ -1,4 +1,4 @@
-![Build Status](https://github.com/aacanakin/dag/actions/workflows/go.yml/badge.svg) [![codecov](https://codecov.io/gh/aacanakin/dag/graph/badge.svg?token=VSRDOJPW7C)](https://codecov.io/gh/aacanakin/dag) [![Go Reference](https://pkg.go.dev/badge/github.com/aacanakin/dag.svg)](https://pkg.go.dev/github.com/aacanakin/dag)
+![Build Status](https://github.com/aacanakin/dag/actions/workflows/go.yml/badge.svg) [![codecov](https://codecov.io/gh/aacanakin/dag/graph/badge.svg?token=VSRDOJPW7C)](https://codecov.io/gh/aacanakin/dag) [![Go Reference](https://pkg.go.dev/badge/github.com/aacanakin/dag.svg)](https://pkg.go.dev/github.com/aacanakin/dag) [![Go Report Card](https://goreportcard.com/badge/github.com/aacanakin/dag)](https://goreportcard.com/report/github.com/aacanakin/dag)
 
 # dag
 
