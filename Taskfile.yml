@@ -17,9 +17,10 @@ tasks:
       - go build
 
   lint:install:
-    desc: Install linter
+    desc: Install linters
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - go install honnef.co/go/tools/cmd/staticcheck@latest
 
   lint:
     desc: Lint the project
@@ -27,6 +28,7 @@ tasks:
       - lint:install
     cmds:
       - golangci-lint run
+      - staticcheck ./...
 
   test:clean:
     desc: Clean test cache
